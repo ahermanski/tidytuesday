@@ -1,0 +1,86 @@
+---
+title: "Tidytuesday 02.12"
+output: html_notebook
+---
+
+```{r libraries}
+library(tidyverse)
+library(here)
+library(lubridate)
+library(rayshader)
+library(scales)
+library(viridis)
+```
+
+```{r code}
+tickets <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-12-03/tickets.csv")
+tweet <- tickets %>% 
+  mutate(lat = round(lat, 4)) %>%
+  mutate(lon = round(lon, 4)) %>%
+  filter(lat > 39.8 & lon > -75.35) %>% 
+  group_by(lat, lon) %>% 
+  summarise(n=n()) %>% 
+  ggplot(aes(x = lon, y = lat)) +
+  geom_hex(bins = 30, size = 0.1, color = "white") +
+  scale_fill_viridis_c(option = "C")+
+  theme_void()
+plot_gg(tweet, width = 5, height = 4, scale = 300, multicore = TRUE, windowsize = c(1200, 960),
+        fov = 70, zoom = 0.7, theta = 30, phi = 40) 
+render_snapshot(filename = "philadelphia.png", title_text = "No. of fines in Philadelphia, PA",
+               title_color = "black",
+               vignette = TRUE,
+               title_font = "Helvetica", gravity = "North")
+```
+
+```{r tweet}
+tw <- tickets %>% 
+  mutate(hour = hour(issue_datetime)) %>% 
+  mutate(weekday = wday(issue_datetime, label = TRUE)) %>% 
+  group_by(hour) %>% 
+  mutate(avgfine = sum(fine)/n()) %>% 
+  mutate(no.fines = n()) %>% 
+  ggplot()+
+  geom_line(aes(hour, avgfine, col= no.fines))+
+  theme_minimal()+
+  xlab("Time of day")+
+  ylab("avg. fine")+
+  scale_color_continuous(label = comma)
+plot_gg(tw, width = 3.5, multicore = TRUE, windowsize = c(800, 800), 
+        zoom = 0.85, phi = 35, theta = 30, sunangle = 225, soliddepth = -100)
+render_snapshot("fines.png", title_text = "Avg. fine amount by hour in Philadelphia, PA",
+               title_color = "black",
+               vignette = TRUE,
+               title_font = "Helvetica", gravity = "North")
+```
+
+```{r}
+t1 <- tickets %>% 
+  mutate(Wochentag = factor(wday(issue_datetime, label = TRUE))) %>% 
+  mutate(Stunde = hour(issue_datetime)) %>% 
+  group_by(Wochentag, Stunde) %>% 
+  summarise(Strafe = mean(fine, na.rm = TRUE), Strafzettel = n()) 
+tile1 <- ggplot(t1, aes(Stunde, Wochentag, fill = Strafe))+
+  geom_tile()+
+  coord_equal()+
+  scale_x_continuous(expand = c(0, 0))+
+  scale_fill_viridis(name = "Average fine")+
+  labs(y=NULL,
+       x=NULL,
+       title="Parking ticket fines are higher at night than during the day",
+       subtitle="Saturday morning has some of the lowest average fines, \ncompared to other days and times")
+tile2 <- ggplot(t1, aes(Stunde, Wochentag, fill = Strafzettel))+
+  geom_tile()+
+  coord_equal()+
+  scale_x_continuous(expand = c(0, 0))+
+  scale_fill_viridis(name = "Number of fines")+
+  labs(y=NULL,
+       x="Hour of day",
+       title="Number of fines peaks at noon Tuesday to Thursday",
+       subtitle = "Saturday morning fines are not uncommon")
+plot_gg(tile1, width = 5, height = 4, scale = 300, multicore = TRUE, windowsize = c(1200, 960),
+        fov = 70, zoom = 0.7, theta = 30, phi = 40) 
+render_snapshot(filename = "file1.png")
+plot_gg(tile2, width = 5, height = 4, scale = 300, multicore = TRUE, windowsize = c(1200, 960),
+        fov = 70, zoom = 0.7, theta = 30, phi = 40) 
+render_snapshot(filename = "file2.png")
+```
