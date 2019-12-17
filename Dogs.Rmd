@@ -49,12 +49,12 @@ states <- c("AK","AL","AR","AZ","CA","CO","CT","DC","DE","FL","GA","GU","HI","IA
 
 ```{r ratio}
 dog_descriptions %>% 
+  select(contact_state, sex) %>% 
   filter(sex %in% c("Female", "Male")) %>% 
   filter(contact_state %in% states) %>% 
   group_by(contact_state, sex) %>% 
-  add_count(name = "Anzahl") %>% 
+  count(name = "Anzahl") %>% 
   ungroup() %>% 
-  select(contact_state, sex, Anzahl) %>% 
   left_join(st_crosswalk, by = c("contact_state" = "abb")) %>% 
   group_by(state) %>% 
   mutate(Gesamt = sum(Anzahl)) %>% 
@@ -77,25 +77,26 @@ dog_descriptions %>%
   ggsave("dogs2.png", width = 10, height = 6, dpi = 300)
 ```
 
-```{r}
+```{r male to female ratio}
 dog_descriptions %>% 
+  select(contact_state, sex) %>% 
   filter(sex %in% c("Female", "Male")) %>% 
   filter(contact_state %in% states) %>% 
-  group_by(cont)
-  mutate(summe = n())
+  group_by(contact_state) %>% 
+  mutate(summe = n()) %>% 
+  ungroup() %>% 
+  group_by(sex) %>% 
+  mutate(summe2= sum(summe))
 ```
 
 ```{r}
-  dogs2 %>% 
-  group_by(state) %>% 
+  dog_descriptions %>% 
+  group_by(contact_state) %>% 
   mutate(Gesamt = sum(Anzahl)) %>% 
-  filter(Gesamt > 50) %>% 
+  filter(Gesamt > 50) 
   ungroup() %>% 
   group_by(sex) %>% 
   summarise(rel = sum(Anzahl)/58022)
-
-  
-  Leberbiopsie Hannover 2019
   
   58128
   
