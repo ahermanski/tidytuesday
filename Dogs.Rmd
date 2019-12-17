@@ -1,0 +1,130 @@
+---
+title: "Dogs"
+output: github_document
+---
+
+```{r}
+library(tidyverse)
+library(tidycensus)
+library(ggthemes)
+library(tvthemes)
+library(artyfarty)
+```
+
+```{r data}
+dog_moves <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-12-17/dog_moves.csv')
+dog_travel <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-12-17/dog_travel.csv')
+dog_descriptions <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-12-17/dog_descriptions.csv')
+```
+
+```{r}
+dog_descriptions %>% 
+mutate(name = tolower(name)) %>% 
+group_by(sex, name) %>% 
+  count(name = "Anzahl", sort = TRUE) %>%
+  ungroup() %>% 
+  top_n(n = 20) %>% 
+  mutate(name = fct_reorder(factor(name), Anzahl)) %>% 
+  ggplot() +
+  theme_retro()+
+  geom_col(aes(x=name, y=Anzahl, color = sex, fill = sex))+
+  coord_flip()+
+  # scale_x_continuous(expand = c(0,0))+
+  scale_y_continuous(expand = c(0,0))+
+  scale_fill_manual(values = c("#ffb6c1", "#add8e6"))+
+  scale_color_manual(values = c("#ffb6c1", "#add8e6"))+
+  labs(title = "Top 20 names in dog shelters")+
+  xlab("")+
+  ylab("")+
+  labs(colour = "")+
+  labs(fill = "")
+  ggsave("top20names.png", width = 10, height = 6, dpi = 300)
+```
+
+```{r}
+dogs2 <- dog_descriptions %>% 
+  filter(sex %in% c("Female", "Male")) %>% 
+  filter(contact_state %in% states) %>% 
+  group_by(contact_state, sex) %>% 
+  count(name = "Anzahl") %>% 
+  ungroup()
+  select(contact_state, sex, Anzahl)
+  
+  state.name
+  
+  
+dogs2 <- left_join(dogs2, st_crosswalk, by = c("contact_state" = "abb"))
+  
+  st_crosswalk <- tibble(state = state.name) %>%
+   bind_cols(tibble(abb = state.abb)) %>% 
+   bind_rows(tibble(state = "District of Columbia", abb = "DC"))
+```
+
+```{r}
+states <- c("AK","AL","AR","AZ","CA","CO","CT","DC","DE","FL","GA","GU","HI","IA","ID", "IL","IN","KS","KY","LA","MA","MD","ME","MH","MI","MN","MO","MS","MT","NC","ND","NE","NH","NJ","NM","NV","NY", "OH","OK","OR","PA","PR","PW","RI","SC","SD","TN","TX","UT","VA","VI","VT","WA","WI","WV","WY");
+```
+
+```{r}
+dogs2 %>%
+  group_by(state) %>% 
+  mutate(Gesamt = sum(Anzahl)) %>% 
+  filter(Gesamt > 50) %>% 
+  ungroup() %>% 
+  mutate(rel.anteil = Anzahl / Gesamt * 100) %>% 
+  mutate(order = if_else(sex == "Male", rel.anteil, 0)) %>% 
+  # mutate(contact_state = fct_reorder(contact_state, rel.anteil)) %>% 
+  ggplot(aes(x = fct_reorder(state, order) , y = rel.anteil, fill = sex)) + 
+  theme_retro()+
+  geom_bar(position = "fill",stat = "identity")+
+  coord_flip()+
+  scale_y_continuous(expand = c(0,0))+
+  xlab("")+
+  ylab("")+
+  scale_fill_manual(values = c("#ffb6c1", "#add8e6"))+
+  scale_color_manual(values = c("#ffb6c1", "#add8e6"))+
+  geom_hline(aes(yintercept=0.5206), colour="#000000", linetype="dashed")+
+  labs(title = "Sex ratio of adoptable dogs with n > 50, mean = 52.06%")
+  
+  
+
+dogs2 %>% 
+  summarise(gesamt=sum(Anzahl))
+  
+
+ggsave("dogs2.png", width = 10, height = 6, dpi = 300)
+
+
+dog_descriptions %>% 
+  filter(sex != "Unknown") %>% 
+  count(sex
+  
+  dogs2 %>% 
+  group_by(state) %>% 
+  mutate(Gesamt = sum(Anzahl)) %>% 
+  filter(Gesamt > 50) %>% 
+  ungroup() %>% 
+  group_by(sex) %>% 
+  summarise(rel = sum(Anzahl)/58022)
+
+  
+  58128
+  
+  58022
+dogs2
+```
+
+```{r}
+dogs2 %>%
+  group_by(state) %>% 
+  mutate(Gesamt = sum(Anzahl)) %>% 
+  ungroup() %>% 
+  # mutate(rel.anteil = Anzahl / Gesamt * 100) %>% 
+  # mutate(contact_state = fct_reorder(contact_state, rel.anteil)) %>% 
+  # spread(key = sex, value = rel.anteil) %>% 
+  ggplot(aes(x = contact_state , y = Anzahl, fill = sex)) + 
+  theme_retro()+
+  geom_bar(position = "fill",stat = "identity")+
+  coord_flip()+
+  scale_y_continuous(expand = c(0,0))
+```
+
