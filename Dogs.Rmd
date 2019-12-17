@@ -74,7 +74,7 @@ dog_descriptions %>%
   geom_hline(aes(yintercept=0.5206), colour="#000000", linetype="dashed")+
   labs(title = "Sex ratio of adoptable dogs with n > 50, mean = 52.06%")
   
-  ggsave("dogs2.png", width = 10, height = 6, dpi = 300)
+  ggsave("dogs.ratio.png", width = 10, height = 6, dpi = 300)
 ```
 
 ```{r male to female ratio}
