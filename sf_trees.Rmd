@@ -1,0 +1,32 @@
+---
+title: "SF trees"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(gganimate)
+library(paletteer)
+library(osmdata)
+library(sf)
+```
+
+```{r}
+# sf_trees <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-01-28/sf_trees.csv')
+# 
+# write_csv(sf_trees, "sf_trees.csv")
+
+read_csv("sf_trees.csv")
+```
+
+```{r}
+sf_trees %>% 
+  mutate(age = Sys.Date() - date) %>% 
+  filter(!is.na(age) & !is.na(latitude) & !is.na(longitude)) 
+
+```
+```{r}
+edit_r_environ()
+usethis::git_sitrep()
+```
+
