@@ -3,30 +3,125 @@ title: "SF trees"
 output: html_notebook
 ---
 
-```{r}
+```{r libraries}
 library(tidyverse)
 library(gganimate)
 library(paletteer)
 library(osmdata)
 library(sf)
+library(lubridate)
 ```
 
-```{r}
+```{r data}
 # sf_trees <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-01-28/sf_trees.csv')
 # 
 # write_csv(sf_trees, "sf_trees.csv")
 
-read_csv("sf_trees.csv")
+sf_trees <- read_csv("sf_trees.csv")
 ```
 
 ```{r}
 sf_trees %>% 
-  mutate(age = Sys.Date() - date) %>% 
-  filter(!is.na(age) & !is.na(latitude) & !is.na(longitude)) 
-
+  mutate(date = case_when(
+    is.na(date) ~ as.Date("1954-12-31", origin = "1970-01-01"),
+    TRUE ~ date
+  )) %>% 
+  arrange(date) %>% 
+  select(date) %>% 
+  mutate(jahr = year(date)) %>% 
+  filter(jahr != 1954) %>% 
+  mutate(decade = floor(jahr / 10) * 10) %>% 
+  count(decade) %>% 
+  ggplot()+
+  geom_col(aes(decade,n))
 ```
+
 ```{r}
-edit_r_environ()
-usethis::git_sitrep()
+sf_trees_na <- sf_trees %>% 
+  mutate(date = case_when(
+    is.na(date) ~ as.Date("1954-12-31", origin = "1970-01-01"),
+    TRUE ~ date
+  )) %>% 
+  arrange(date) %>% 
+  mutate(jahr = year(date)) %>% 
+    filter(jahr == 1954) %>% 
+    filter(latitude < 45 & latitude > 37.6) 
 ```
 
+```{r plot}
+sf_trees %>% 
+    filter(caretaker %in% c("Private", "DPW")) %>% 
+    mutate(date = case_when(
+    is.na(date) ~ as.Date("1954-12-31", origin = "1970-01-01"),
+    TRUE ~ date
+  ),
+  jahr = year(date)) %>% 
+  filter(between(jahr, 1960, 2019)) %>% 
+  mutate(care = factor(case_when(
+    caretaker == "Private" ~ "Private",
+    TRUE ~ "Public"
+  ))) %>% 
+  mutate(decade = floor(jahr / 10) * 10) %>% 
+  mutate(wrap = factor(case_when(
+    decade == 1950 ~ "50s",
+    decade == 1960 ~ "60s",
+    decade == 1970 ~ "70s",
+    decade == 1980 ~ "80s", 
+    decade == 1990 ~ "90s",
+    decade == 2000 ~ "00s",
+    decade == 2010 ~ "10s",
+    decade == 2020 ~ "20s",
+    TRUE ~ "Rest"
+  ))) %>% 
+  mutate(wrap = fct_reorder(wrap, decade)) %>% 
+  mutate(care = fct_reorder(care, decade)) %>% 
+  filter(latitude < 45 & latitude > 37.6) %>% 
+  ggplot()+
+  geom_point(aes(longitude, latitude, color = care), size = 0.3, alpha = 0.2)+
+  # geom_point(data = sf_trees_na, aes(longitude, latitude), color = "red", size = 0.6, alpha = 0.1)+
+  coord_equal()+
+  theme_void()+
+  theme(
+    # plot.background = element_rect(fill = "#000000"),
+    text = element_text(family = "Montserrat", color = "black", size = 16),
+    legend.position = "bottom",
+    legend.text=element_text(size=15),
+    plot.title = element_text(hjust = 0.5, size = 25, face = "bold"),
+    strip.text.x = element_text(size = 15, face = "bold"),
+    plot.caption = element_text(margin = margin(b = 10, l = 100)),
+    plot.margin = unit(c(0, 0.5, 0, 0.5), 'cm'))+
+  guides(colour = guide_legend(override.aes = list(alpha = 1, size = 3)))+
+  labs(color = "Caretaker", 
+       title = "Which decade saw the most trees planted in San Francisco \n and who takes care of them?",
+       caption = "@Rzeugnisse\n data: data.sfgov.org • #TidyTuesday")+
+  facet_wrap( ~wrap)+
+  scale_color_manual(values = c("#56B4E9FF","#E69F00FF"))
+
+ggsave("Tidytuesday_week_5.pdf", width = 12, height = 7.47, dpi = 300, device = cairo_pdf)
+
+ggsave("Tidytuesday_week_5.png", width = 12, height = 7.47, dpi = 300)
+```
+
+```{r}
+sf_trees %>% 
+    mutate(date = case_when(
+    is.na(date) ~ as.Date("1954-12-31", origin = "1970-01-01"),
+    TRUE ~ date
+  )) %>% 
+  arrange(date) %>% 
+  mutate(jahr = year(date)) %>% 
+  filter(jahr != 1954) %>% 
+  mutate(decade = floor(jahr / 10) * 10) %>% 
+  filter(latitude < 45 & latitude > 37.6) %>% 
+  ggplot()+
+  geom_point(aes(longitude, latitude, color = factor(jahr)), size = 0.6, alpha = 0.2)+
+  # geom_point(data = sf_trees_na, aes(longitude, latitude), color = "red", size = 0.6, alpha = 0.1)+
+  coord_equal()+
+  theme_void()+
+  theme(text = element_text(family = "Montserrat"))+
+  guides(colour = guide_legend(override.aes = list(alpha=1)))+
+  # scale_color_paletteer_d("jcolors::rainbow")+
+  labs(title = "{closest_state}")+
+  theme(legend.position = "none") +
+  transition_states(states = jahr, transition_length = 0)
+```
