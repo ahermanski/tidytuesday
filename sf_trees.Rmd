@@ -106,7 +106,7 @@ ggsave("Tidytuesday_week_5.pdf", width = 12, height = 7.47, dpi = 300, device = 
 ggsave("Tidytuesday_week_5.png", width = 12, height = 7.47, dpi = 300)
 ```
 
-```{r}
+```{r animate}
 sf_trees %>% 
     mutate(date = case_when(
     is.na(date) ~ as.Date("1954-12-31", origin = "1970-01-01"),
@@ -129,3 +129,31 @@ sf_trees %>%
   theme(legend.position = "none") +
   transition_states(states = jahr, transition_length = 0)
 ```
+
+
+```{r}
+sf_trees %>% 
+  ggplot()+
+  geom_point(aes(longitude, latitude, color = care), size = 0.3, alpha = 0.2)+
+  # geom_point(data = sf_trees_na, aes(longitude, latitude), color = "red", size = 0.6, alpha = 0.1)+
+  coord_equal()+
+  theme_void()+
+  theme(
+    # plot.background = element_rect(fill = "#000000"),
+    text = element_text(family = "Montserrat", color = "black", size = 16),
+    legend.position = "bottom",
+    legend.text=element_text(size=15),
+    plot.title = element_text(hjust = 0.5, size = 25, face = "bold"),
+    strip.text.x = element_text(size = 15, face = "bold"),
+    plot.caption = element_text(margin = margin(b = 10, l = 100)),
+    plot.margin = unit(c(0, 0.5, 0, 0.5), 'cm'))+
+  guides(colour = guide_legend(override.aes = list(alpha = 1, size = 3)))+
+  labs(color = "Caretaker", 
+       title = "Which decade saw the most trees planted in San Francisco \n and who takes care of them?",
+       subtitle = "{closest_state}",
+       caption = "@Rzeugnisse\n data: data.sfgov.org • #TidyTuesday")+
+  # facet_wrap( ~wrap)+
+  scale_color_manual(values = c("#56B4E9FF","#E69F00FF"))+
+transition_states(states = wrap, transition_length = 0)
+```
+
