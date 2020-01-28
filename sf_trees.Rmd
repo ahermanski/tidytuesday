@@ -20,6 +20,36 @@ library(lubridate)
 sf_trees <- read_csv("sf_trees.csv")
 ```
 
+```{r data wrangling}
+sf_trees <- sf_trees %>% 
+    # filter(caretaker %in% c("Private", "DPW")) %>% 
+    mutate(date = case_when(
+    is.na(date) ~ as.Date("1954-12-31", origin = "1970-01-01"),
+    TRUE ~ date
+  ),
+  jahr = year(date)) %>% 
+  filter(between(jahr, 1960, 2019)) %>% 
+  mutate(care = factor(case_when(
+    caretaker == "Private" ~ "Private",
+    TRUE ~ "Public"
+  ))) %>% 
+  mutate(decade = floor(jahr / 10) * 10) %>% 
+  mutate(wrap = factor(case_when(
+    decade == 1950 ~ "50s",
+    decade == 1960 ~ "60s",
+    decade == 1970 ~ "70s",
+    decade == 1980 ~ "80s", 
+    decade == 1990 ~ "90s",
+    decade == 2000 ~ "00s",
+    decade == 2010 ~ "10s",
+    decade == 2020 ~ "20s",
+    TRUE ~ "Rest"
+  ))) %>% 
+  mutate(wrap = fct_reorder(wrap, decade)) %>% 
+  mutate(care = fct_reorder(care, decade)) %>% 
+  filter(latitude < 45 & latitude > 37.6)
+```
+
 ```{r}
 sf_trees %>% 
   mutate(date = case_when(
@@ -50,32 +80,6 @@ sf_trees_na <- sf_trees %>%
 
 ```{r plot}
 sf_trees %>% 
-    filter(caretaker %in% c("Private", "DPW")) %>% 
-    mutate(date = case_when(
-    is.na(date) ~ as.Date("1954-12-31", origin = "1970-01-01"),
-    TRUE ~ date
-  ),
-  jahr = year(date)) %>% 
-  filter(between(jahr, 1960, 2019)) %>% 
-  mutate(care = factor(case_when(
-    caretaker == "Private" ~ "Private",
-    TRUE ~ "Public"
-  ))) %>% 
-  mutate(decade = floor(jahr / 10) * 10) %>% 
-  mutate(wrap = factor(case_when(
-    decade == 1950 ~ "50s",
-    decade == 1960 ~ "60s",
-    decade == 1970 ~ "70s",
-    decade == 1980 ~ "80s", 
-    decade == 1990 ~ "90s",
-    decade == 2000 ~ "00s",
-    decade == 2010 ~ "10s",
-    decade == 2020 ~ "20s",
-    TRUE ~ "Rest"
-  ))) %>% 
-  mutate(wrap = fct_reorder(wrap, decade)) %>% 
-  mutate(care = fct_reorder(care, decade)) %>% 
-  filter(latitude < 45 & latitude > 37.6) %>% 
   ggplot()+
   geom_point(aes(longitude, latitude, color = care), size = 0.3, alpha = 0.2)+
   # geom_point(data = sf_trees_na, aes(longitude, latitude), color = "red", size = 0.6, alpha = 0.1)+
