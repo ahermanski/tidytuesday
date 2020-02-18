@@ -35,6 +35,8 @@ consumption <- food_consumption %>%
 ```
 
 ```{r map prep}
+#Source: https://egallic.fr/en/european-map-using-r/
+
 worldMap <- getMap()
 
 # European Countries
@@ -71,7 +73,6 @@ europeCoords$value <- europeTable$value[match(europeCoords$region,europeTable$co
 europeCoords <- left_join(europeCoords, consumption, by = c("region" = "country"))
 ```
 
-
 ```{r}
 P <- ggplot() + geom_polygon(data = europeCoords, aes(x = long, y = lat, group = region, fill = co2_emmission),
                              colour = "black", size = 0.1) +
@@ -83,7 +84,7 @@ P <- P +
   scale_fill_gradient(name = "CO2 emissions per person", low = "#FF0000FF", high = "#FFFF00FF", na.value = "grey50")
 
 
-P <- P + 
+P + 
   theme_void()+
   theme(legend.position="bottom")+
   theme(#panel.grid.minor = element_line(colour = NA), panel.grid.minor = element_line(colour = NA),
@@ -94,16 +95,17 @@ P <- P +
                #rect = element_blank(),
                plot.margin = unit(0 * c(-1.5, -1.5, -1.5, -1.5), "lines"),
               plot.title = element_text(face = "bold"),
-               text = element_text(family = "Helvetica"))+
+               text = element_text(family = "Montserrat"))+
   labs(title = "Food related CO2 Emissions (Kg CO2/person/year) in Europe", subtitle = "",alpha = "", fill = "", caption = "Data: https://www.nu3.de/blogs/nutrition/food-carbon-footprint-index-2018\n@Rzeugnisse • #TidyTuesday")+
     ggsave("europe.png", dpi = "retina", height = 8, width = 8)
-
 ```
 
 ```{r rayshader}
 plot_gg(P, width = 5, height = 4, scale = 300, multicore = TRUE, windowsize = c(1200, 960), fov = 70, zoom = 0.7, theta = 30, phi = 40) 
 render_snapshot(filename = "CO2.png")
 ```
+
+#Rest der nicht gebraucht wird
 
 ```{r}
 food_consumption %>% 
@@ -127,9 +129,6 @@ food_consumption %>%
 countries <- ne_countries(scale = "small", continent = "Europe", returnclass = "sf")
 turkey <- ne_countries(scale = "small", country =  "Turkey", returnclass = "sf")
 
-countries <- countries
-  # filter(admin != "Russia")
-
 ggplot(countries)+
   geom_sf()+
   geom_sf(data = turkey)+
@@ -146,7 +145,7 @@ map_data("world") %>%
   ggplot(aes(long, lat))+
   geom_polygon(aes(group = group))+
   coord_map(xlim = c(-26, 35),  ylim = c(32, 71))
-    # coord_map("albers",  at0 = 60.5, lat1 = 29.5)
+  # coord_map("albers",  at0 = 60.5, lat1 = 29.5)
 
 map_data
 ```
