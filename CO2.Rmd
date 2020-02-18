@@ -1,0 +1,152 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r libs}
+library(tidyverse)
+library(maps)
+library(rnaturalearth)
+library(paletteer)
+library(grid)
+library(rworldmap)
+library(rayshader)
+```
+
+```{r data}
+food_consumption <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-02-18/food_consumption.csv')
+```
+
+```{r}
+vegan <- c("Nuts inc. Peanut Butter", "Rice", "Soybeans", "Wheat and Wheat Products")
+```
+
+```{r}
+consumption <- food_consumption %>% 
+  mutate(country = case_when(
+    country == "Czech Republic" ~ "Czech Rep.",
+    country == "Bosnia and Herzegovina" ~ "Bosnia and Herz.",
+    TRUE ~ country
+  )) %>% 
+  mutate(is_vegan = if_else(food_category %in% vegan, "vegan", "non-vegan")) %>% 
+  filter(country %in% europe) %>%  
+  group_by(country, is_vegan) %>% 
+  summarise(consumption = sum (consumption), co2_emmission = sum (co2_emmission)) 
+```
+
+```{r map prep}
+worldMap <- getMap()
+
+# European Countries
+europe <- c("Albania", "Armenia", "Austria", "Belarus", "Belgium", "Bosnia and Herz.", "Bulgaria", "Croatia", "Cyprus",
+                   "Czech Rep.", "Denmark", "Estonia", "Finland", "France", "Georgia",
+                   "Germany", "Greece", "Hungary", "Iceland", "Ireland", "Italy", "Latvia",
+                   "Lithuania", "Luxembourg", "Macedonia", "Malta", "Netherlands", "Norway", "Poland",
+                   "Portugal", "Romania", "Russia", "Serbia", "Slovakia", "Slovenia", "Spain",
+                   "Sweden", "Switzerland", "Turkey", "Ukraine", "United Kingdom")
+
+# Select only the index of countries in Europe
+indEU <- which(worldMap$NAME%in%europe)
+```
+
+```{r}
+europeCoords <- lapply(indEU, function(i){
+  df <- data.frame(worldMap@polygons[[i]]@Polygons[[1]]@coords)
+  df$region =as.character(worldMap$NAME[i])
+  colnames(df) <- list("long", "lat", "region")
+  return(df)
+})
+
+europeCoords <- do.call("rbind", europeCoords)
+```
+
+```{r}
+value <- sample(x = seq(0,3,by = 0.1), size = length(europe),
+                replace = TRUE)
+europeTable <- data.frame(country = europe, value = value)
+europeCoords$value <- europeTable$value[match(europeCoords$region,europeTable$country)]
+```
+
+```{r}
+europeCoords <- left_join(europeCoords, consumption, by = c("region" = "country"))
+```
+
+
+```{r}
+P <- ggplot() + geom_polygon(data = europeCoords, aes(x = long, y = lat, group = region, fill = co2_emmission),
+                             colour = "black", size = 0.1) +
+  coord_map(xlim = c(-26, 35),  ylim = c(32, 71))
+  # facet_wrap(~ is_vegan, scales = "free")
+
+P <- P + 
+   scale_fill_paletteer_c("viridis::magma", -1)
+  scale_fill_gradient(name = "CO2 emissions per person", low = "#FF0000FF", high = "#FFFF00FF", na.value = "grey50")
+
+
+P <- P + 
+  theme_void()+
+  theme(legend.position="bottom")+
+  theme(#panel.grid.minor = element_line(colour = NA), panel.grid.minor = element_line(colour = NA),
+               #panel.background = element_rect(fill = NA, colour = NA),
+               axis.text.x = element_blank(),
+               axis.text.y = element_blank(), axis.ticks.x = element_blank(),
+               axis.ticks.y = element_blank(), axis.title = element_blank(),
+               #rect = element_blank(),
+               plot.margin = unit(0 * c(-1.5, -1.5, -1.5, -1.5), "lines"),
+              plot.title = element_text(face = "bold"),
+               text = element_text(family = "Helvetica"))+
+  labs(title = "Food related CO2 Emissions (Kg CO2/person/year) in Europe", subtitle = "",alpha = "", fill = "", caption = "Data: https://www.nu3.de/blogs/nutrition/food-carbon-footprint-index-2018\n@Rzeugnisse • #TidyTuesday")+
+    ggsave("europe.png", dpi = "retina", height = 8, width = 8)
+
+```
+
+```{r rayshader}
+plot_gg(P, width = 5, height = 4, scale = 300, multicore = TRUE, windowsize = c(1200, 960), fov = 70, zoom = 0.7, theta = 30, phi = 40) 
+render_snapshot(filename = "CO2.png")
+```
+
+```{r}
+food_consumption %>% 
+  mutate(country = case_when(
+    country == "Czech Republic" ~ "Czech Rep.",
+    country == "Bosnia and Herzegovina" ~ "Bosnia and Herz.",
+    TRUE ~ country
+  )) %>% 
+  mutate(is_vegan = if_else(food_category %in% vegan, "vegan", "non-vegan")) %>% 
+  filter(country %in% europe) %>%  
+  group_by(country) %>% 
+  mutate(sum_con = sum (consumption), sum_co2 = sum (co2_emmission)) %>% 
+  group_by(country, is_vegan) %>% 
+  mutate(sum_con_v = sum (consumption), sum_co2_v = sum (co2_emmission)) %>% 
+  mutate(pct = sum_co2_v / sum_co2 * 100) %>% 
+  group_by(country, is_vegan) %>% 
+  slice(1)
+```
+
+```{r}
+countries <- ne_countries(scale = "small", continent = "Europe", returnclass = "sf")
+turkey <- ne_countries(scale = "small", country =  "Turkey", returnclass = "sf")
+
+countries <- countries
+  # filter(admin != "Russia")
+
+ggplot(countries)+
+  geom_sf()+
+  geom_sf(data = turkey)+
+  theme_void()+
+    coord_sf(xlim = c(-22, 35),  ylim = c(32, 71))
+  ggsave("europe.pdf", dpi = "retina", height = 10, width = 10)
+```
+
+```{r}
+map_data("world") %>% 
+  filter(region %in% europe) %>% 
+  filter(region != "Russia") %>% 
+  arrange(region) %>% 
+  ggplot(aes(long, lat))+
+  geom_polygon(aes(group = group))+
+  coord_map(xlim = c(-26, 35),  ylim = c(32, 71))
+    # coord_map("albers",  at0 = 60.5, lat1 = 29.5)
+
+map_data
+```
