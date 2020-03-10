@@ -1,0 +1,198 @@
+---
+title: "Tuition"
+output: html_notebook
+---
+
+```{r packages}
+library(tidyverse)
+library(paletteer)
+```
+
+```{r Daten}
+tuition_cost <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-03-10/tuition_cost.csv')
+
+tuition_income <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-03-10/tuition_income.csv') 
+
+salary_potential <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-03-10/salary_potential.csv')
+
+historical_tuition <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-03-10/historical_tuition.csv')
+
+diversity_school <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-03-10/diversity_school.csv')
+```
+
+```{r Bundesstaatengrenzen}
+states <- map_data("state")
+```
+
+```{r tuition difference}
+tuition_cost %>% 
+  filter(type == "Public") %>% 
+  # drop_na() %>% 
+  mutate(state = tolower(state)) %>% 
+  group_by(state, degree_length) %>% 
+  mutate(state_dif = median(out_of_state_tuition) - median(in_state_tuition)) %>% 
+  ungroup() %>% 
+  left_join(states, by = c("state" = "region")) %>% 
+  filter(!state %in% c("alaska", "hawaii")) %>% 
+  ggplot()+
+  geom_polygon(aes(long, lat, group = group, fill = state_dif), color = "white", size = 0.1) +
+  scale_fill_paletteer_c("viridis::viridis", -1, breaks = c(0, 5000, 10000, 15000), labels = c("0k", "5k", "10k", "15k"))+
+  coord_map()+
+  theme_void()+
+  theme(legend.position = "bottom",
+        plot.title = element_text(face = "bold", hjust = 0.5),
+        text = element_text(family = "Helvetica"),
+        panel.spacing = unit(2, "lines"),
+        strip.text.x = element_text(margin = margin(b = 1, t = 0)))+
+  labs(title = "How much more do out-of-state students have to pay in each state?", fill = "Median Difference in US $")+
+  facet_wrap(~ degree_length,
+             labeller = labeller(degree_length = 
+    c("2 Year" = "2 Year Degree",
+      "4 Year" = "4 Year Degree")))
+  ggsave("tuition.png", dpi = 300, device = "png", width = 10, height = 4)
+```
+
+```{r tuition difference per year}
+tuition_cost %>% 
+  filter(type == "Public") %>% 
+  mutate(jahre = if_else(degree_length == "2 Year", 2, 4)) %>% 
+  mutate(state = tolower(state)) %>% 
+  group_by(state, jahre) %>% 
+  mutate(state_dif = (median(out_of_state_tuition) - median(in_state_tuition)) / jahre) %>% 
+  ungroup() %>% 
+  left_join(states, by = c("state" = "region")) %>% 
+  filter(!state %in% c("alaska", "hawaii")) %>% 
+  ggplot()+
+  geom_polygon(aes(long, lat, group = group, fill = state_dif), color = "white", size = 0.1) +
+  scale_fill_paletteer_c("viridis::viridis", -1, breaks = c(0, 2000, 4000, 6000), labels = c("0k", "2k", "4k", "6k"))+
+  coord_map()+
+  theme_void()+
+  theme(legend.position = "bottom",
+        plot.title = element_text(face = "bold", hjust = 0.5),
+        text = element_text(family = "Helvetica"),
+        panel.spacing = unit(2, "lines"),
+        strip.text.x = element_text(margin = margin(b = 1, t = 0)))+
+  labs(title = "How much more do out-of-state students have to pay in each state?", fill = "Median per Year Difference in US $")+
+  facet_wrap(~ degree_length,
+             labeller = labeller(degree_length = 
+    c("2 Year" = "2 Year Degree",
+      "4 Year" = "4 Year Degree")))
+```
+
+```{r room and board difference}
+tuition_cost %>% 
+  filter(type %in% c("Public", "Private") & degree_length == "4 Year") %>% 
+  drop_na() %>%
+  mutate(state = tolower(state)) %>% 
+  group_by(state, type) %>% 
+  summarise(room_a_board = median(room_and_board)) %>% 
+  pivot_wider(names_from = type, values_from = room_a_board) %>% 
+  mutate(room_a_board_dif = Private - Public) %>% 
+  ungroup() %>% 
+  left_join(states, by = c("state" = "region")) %>% 
+  filter(!state %in% c("alaska", "hawaii")) %>% 
+  ggplot()+
+  geom_polygon(aes(long, lat, group = group, fill = room_a_board_dif), color = "white", size = 0.1) +
+  scale_fill_paletteer_c("viridis::viridis", -1, breaks = c(-4000, -2000, 0, 2000), labels = c("-4k", "-2k", "0k", "2k"))+
+  coord_map()+
+  theme_void()+
+  theme(legend.position = "bottom",
+        plot.title = element_text(face = "bold", hjust = 0.5),
+        text = element_text(family = "Roboto Slab"))+
+  labs(title = "What is the difference in cost for room-and-board at private and public schools for 4 year degrees?", fill = "Median Difference in US $")
+    
+  ggsave("room_difference.png", dpi = 300, device = "png", width = 10, height = 4)
+```
+
+```{r room and board}
+tuition_cost %>% 
+  filter(type %in% c("Public", "Private")) %>% 
+  drop_na() %>%
+  mutate(state = tolower(state)) %>% 
+  group_by(state, degree_length) %>% 
+  summarise(room_a_board = median(room_and_board)) %>% 
+  # mutate(room_a_board_dif = Private - Public) %>% 
+  ungroup() %>% 
+  left_join(states, by = c("state" = "region")) %>% 
+  filter(!state %in% c("alaska", "hawaii")) %>% 
+  ggplot()+
+  geom_polygon(aes(long, lat, group = group, fill = room_a_board), color = "white", size = 0.1) +
+  scale_fill_paletteer_c("viridis::viridis", -1, breaks = c(5000, 9500, 14000), labels = c( "5k", "9.5k", "14k"))+
+  coord_map()+
+  theme_void()+
+  theme(legend.position = "bottom",
+        plot.title = element_text(face = "bold", hjust = 0.5),
+        text = element_text(family = "Roboto Slab"))+
+  labs(title = "How much does room and board cost in each state", fill = "Median Difference in US $")+
+  facet_wrap(~degree_length,
+             labeller = labeller(degree_length = 
+    c("2 Year" = "2 Year Degree",
+      "4 Year" = "4 Year Degree")))
+
+    ggsave("room_and_board.png", dpi = 300, device = "png", width = 10, height = 4)
+```
+
+```{r room and board per year}
+tuition_cost %>% 
+  filter(type %in% c("Public", "Private") & degree_length == "4 Year") %>% 
+  mutate(jahre = if_else(degree_length == "2 Year", 2, 4)) %>% 
+  drop_na() %>% 
+  mutate(state = tolower(state)) %>% 
+  group_by(state, type, degree_length) %>% 
+  summarise(room_a_board = median(room_and_board) / 4) %>% 
+  ungroup() %>% 
+  left_join(states, by = c("state" = "region")) %>% 
+  ggplot()+
+  geom_polygon(aes(long, lat, group = group, fill = room_a_board), color = "white", size = 0.1) +
+  scale_fill_paletteer_c("viridis::viridis", -1)+
+  coord_map()+
+  facet_wrap(~type + degree_length,
+             labeller = labeller(degree_length = 
+    c("2 Year" = "2 Year Degree",
+      "4 Year" = "4 Year Degree")))+
+  theme_void()+
+  theme(legend.position = "bottom",
+        plot.title = element_text(face = "bold", hjust = 0.5),
+        text = element_text(family = "Roboto Slab"),
+        strip.text.x = element_text(margin = margin(b = 1, t = 0)))+
+  labs(title = "How much does room-and-board cost at private and public schools per year?", fill = "Median per Year Cost in US $")
+    ggsave("room.png", dpi = 300, device = "png", width = 10, height = 4)
+```
+
+```{r}
+tuition_cost %>% 
+  filter(type %in% c("Public", "Private") & degree_length == "4 Year") %>% 
+  drop_na() %>%
+  mutate(state = tolower(state)) %>% 
+  group_by(state, degree_length) %>% 
+  summarise(room_a_board = median(room_and_board)) %>% 
+  arrange(room_a_board)
+```
+
+```{r}
+tuition_cost %>% 
+  filter(type %in% c("Public", "Private")) %>% 
+  drop_na() %>%
+  mutate(state = tolower(state)) %>% 
+  group_by(state, type, degree_length) %>% 
+  summarise(room_a_board = median(room_and_board)) %>% 
+  ungroup() %>% 
+  left_join(states, by = c("state" = "region")) %>% 
+  filter(!state %in% c("alaska", "hawaii")) %>% 
+  ggplot()+
+  geom_polygon(aes(long, lat, group = group, fill = room_a_board), color = "white", size = 0.1) +
+  scale_fill_paletteer_c("viridis::viridis", -1)+
+  coord_map()+
+  theme_void()+
+  theme(legend.position = "bottom",
+        plot.title = element_text(face = "bold", hjust = 0.5),
+        text = element_text(family = "Roboto Slab"))+
+  labs(title = "What is the difference in cost for room and board at private and public schools?", fill = "Median per Year Difference in US $")+
+    facet_wrap(~ degree_length + type,
+             labeller = labeller(degree_length = 
+    c("2 Year" = "2 Year Degree",
+      "4 Year" = "4 Year Degree")))
+    
+  ggsave("room.png", dpi = 300, device = "png", width = 10, height = 4)
+```
+
