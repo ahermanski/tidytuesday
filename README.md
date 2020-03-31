@@ -1,5 +1,9 @@
 # #TidyTuesday
 
+## 2020 Week 14
+
+![Week 14](https://raw.githubusercontent.com/ahermanski/tidytuesday/master/plots/Tidytuesday_week_14b.png)
+
 ## 2020 Week 11
 
 ![Week 11](https://raw.githubusercontent.com/ahermanski/tidytuesday/master/plots/Tidytuesday_week_11.png)
