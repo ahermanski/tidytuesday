@@ -1,0 +1,257 @@
+---
+title: "Bier"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(paletteer)
+```
+
+```{r Daten}
+# brewing_materials <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-03-31/brewing_materials.csv')
+# beer_taxed <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-03-31/beer_taxed.csv')
+# brewer_size <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-03-31/brewer_size.csv')
+beer_states <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-03-31/beer_states.csv')
+```
+
+```{r Bundesstaatengrenzen}
+states <- map_data("state")
+
+codes <- USAboundaries::state_codes %>% 
+  mutate(state_name = tolower(state_name))
+
+pop <- usmap::statepop
+```
+
+```{r}
+beer_states %>% 
+  filter(state != "total") %>% 
+  # filter(state == "TN") %>%
+  drop_na() %>% 
+  group_by(state, year) %>% 
+  summarise(sum=sum(barrels)) %>% 
+  # slice(1,12) %>%
+  mutate(pct.chg = ((sum - lag(sum)) / lag(sum) * 100)) %>%
+  # mutate(pct.chg = log(last(sum) - first(sum)) / first(sum) * 100) %>% 
+  ungroup() %>% 
+  group_by(state) %>% 
+  replace_na(list(pct.chg = 0)) %>% 
+  ungroup() %>% 
+  left_join(codes, by = c("state" = "state_abbr")) %>% 
+  left_join(states, by = c("state_name" = "region")) %>% 
+  left_join(pop, by = c("state" = "abbr")) %>% 
+  filter(!state %in% c("alaska", "hawaii")) %>% 
+  group_by(state, year) %>% 
+  # mutate(per.cap = sum / pop_2015) %>% 
+  # mutate(pct.chg = ((sum / pop_2015 - lag(sum / pop_2015)) / lag(sum / pop_2015) * 100)) %>%
+  ggplot()+
+  # geom_polygon(aes(long, lat, group = group, fill = per.cap), color = "white", size = 0.1) +
+  geom_polygon(aes(long, lat, group = group, fill = pct.chg), color = "white", size = 0.1) +
+  # scale_fill_paletteer_c("viridis::viridis", -1, breaks = c(50, 100, 200, 300))+
+  scale_fill_paletteer_c("viridis::viridis", -1)+
+  coord_map()+
+  theme_void()+
+  facet_wrap(~year)+
+  theme(legend.position = "bottom",
+        plot.title = element_text(face = "bold", hjust = 0.5),
+        text = element_text(family = "Helvetica"),
+        panel.spacing = unit(2, "lines"),
+        strip.text.x = element_text(margin = margin(b = 1, t = 0)))+
+  labs(title = "YOY change in beer production in the cont. US", fill = "Change in %", caption = "@Rzeugnisse\n data: https://www.ttb.gov/beer/statistics • #TidyTuesday")
+  
+  ggsave("beer.png", dpi = 300, width = 15, height = 8)
+```
+
+```{r}
+beer_states %>% 
+  filter(state != "total") %>% 
+  filter(state != "TN") %>%
+  drop_na() %>% 
+  group_by(state, year) %>% 
+  summarise(sum=sum(barrels)) %>% 
+  # slice(1,12) %>%
+  mutate(pct.chg = ((sum - lag(sum)) / lag(sum) * 100)) %>%
+  # mutate(pct.chg = log(last(sum) - first(sum)) / first(sum) * 100) %>% 
+  ungroup() %>% 
+  group_by(state) %>% 
+  replace_na(list(pct.chg = 0)) %>% 
+  ungroup() %>% 
+  left_join(codes, by = c("state" = "state_abbr")) %>% 
+  left_join(states, by = c("state_name" = "region")) %>% 
+  left_join(pop, by = c("state" = "abbr")) %>% 
+  filter(!state %in% c("alaska", "hawaii")) %>% 
+  group_by(state, year) %>% 
+  # mutate(per.cap = sum / pop_2015) %>% 
+  # mutate(pct.chg = ((sum / pop_2015 - lag(sum / pop_2015)) / lag(sum / pop_2015) * 100)) %>%
+  ggplot()+
+  # geom_polygon(aes(long, lat, group = group, fill = per.cap), color = "white", size = 0.1) +
+  geom_polygon(aes(long, lat, group = group, fill = pct.chg), color = "white", size = 0.1) +
+  # scale_fill_paletteer_c("viridis::viridis", -1, breaks = c(50, 100, 200, 300))+
+  scale_fill_paletteer_c("viridis::viridis", -1)+
+  coord_map()+
+  theme_void()+
+  facet_wrap(~year)+
+  theme(legend.position = "bottom",
+        plot.title = element_text(face = "bold", hjust = 0.5),
+        text = element_text(family = "Helvetica"),
+        panel.spacing = unit(2, "lines"),
+        strip.text.x = element_text(margin = margin(b = 1, t = 0)))+
+  labs(title = "YOY change in beer production in the cont. US (excluding TN)", fill = "Change in %", caption = "@Rzeugnisse\n data: https://www.ttb.gov/beer/statistics • #TidyTuesday")
+
+ggsave("beer_2.png", dpi = 300, width = 15, height = 8)
+```
+
+```{r}
+beer_states %>% 
+  filter(state != "total") %>% 
+  # filter(state != "TN") %>%
+  filter(state %in% c("TN", "AL")) %>% 
+  drop_na() %>% 
+  group_by(state, year) %>% 
+  summarise(sum=sum(barrels)) %>% 
+  slice(1,12) %>%
+  mutate(pct.chg = ((sum - lag(sum)) / lag(sum) * 100)) %>%
+  mutate(pct.chg = (last(sum) - first(sum)) / first(sum) * 100) %>% 
+  ungroup() %>% 
+  # slice(2) %>% 
+  group_by(state) %>% 
+  replace_na(list(pct.chg = 0)) %>% 
+  ungroup() %>% 
+  left_join(codes, by = c("state" = "state_abbr")) %>% 
+  left_join(states, by = c("state_name" = "region")) %>% 
+  left_join(pop, by = c("state" = "abbr")) %>% 
+  filter(!state %in% c("alaska", "hawaii")) %>% 
+  # group_by(state, year) %>% 
+  # mutate(per.cap = sum / pop_2015) %>% 
+  # mutate(pct.chg = ((sum / pop_2015 - lag(sum / pop_2015)) / lag(sum / pop_2015) * 100)) %>%
+  ggplot()+
+  # geom_polygon(aes(long, lat, group = group, fill = per.cap), color = "white", size = 0.1) +
+  geom_polygon(aes(long, lat, group = group, fill = pct.chg), color = "white", size = 0.1) +
+  # scale_fill_paletteer_c("viridis::viridis", -1, breaks = c(50, 100, 200, 300))+
+  scale_fill_paletteer_c("viridis::viridis", -1)+
+  coord_map()+
+  theme_void()+
+  # facet_wrap(~year)+
+  theme(legend.position = "bottom",
+        plot.title = element_text(face = "bold", hjust = 0.5),
+        text = element_text(family = "Helvetica"),
+        panel.spacing = unit(2, "lines"),
+        strip.text.x = element_text(margin = margin(b = 1, t = 0)))+
+  labs(title = "Change in beer production between 2008 & 2019 in the cont. US ", fill = "Change in %", caption = "@Rzeugnisse\n data: https://www.ttb.gov/beer/statistics • #TidyTuesday")
+
+ggsave("beer_3.png", dpi = 300, width = 12, height = 8)
+```
+
+```{r}
+beer_states %>% 
+  filter(state != "total") %>% 
+  # filter(state == "TN") %>%
+  drop_na() %>% 
+  group_by(state, year) %>% 
+  summarise(sum=sum(barrels)) %>% 
+  # slice(1,12) %>%
+  # mutate(pct.chg = ((sum - lag(sum)) / lag(sum) * 100)) %>%
+  # mutate(pct.chg = log(last(sum) - first(sum)) / first(sum) * 100) %>% 
+  mutate(chg = ((sum - lag(sum))) / 1000000) %>% 
+  ungroup() %>% 
+  group_by(state) %>% 
+  replace_na(list(pct.chg = 0)) %>% 
+  ungroup() %>% 
+  left_join(codes, by = c("state" = "state_abbr")) %>% 
+  left_join(states, by = c("state_name" = "region")) %>% 
+  left_join(pop, by = c("state" = "abbr")) %>% 
+  filter(!state %in% c("alaska", "hawaii")) %>% 
+  filter(year != 2008) %>% 
+  ggplot()+
+  geom_polygon(aes(long, lat, group = group, fill = chg), color = "white", size = 0.1) +
+  # geom_polygon(aes(long, lat, group = group, fill = pct.chg), color = "white", size = 0.1) +
+  # scale_fill_paletteer_c("viridis::viridis", -1, breaks = c(50, 100, 200, 300))+
+  # scale_fill_paletteer_c("viridis::viridis", -1)+
+  scale_fill_paletteer_c("viridis::plasma")+
+  coord_map()+
+  theme_void()+
+  facet_wrap(~year)+
+  theme(legend.position = "bottom",
+        plot.title = element_text(face = "bold", hjust = 0.5),
+        text = element_text(family = "Helvetica"),
+        panel.spacing = unit(2, "lines"),
+        strip.text.x = element_text(margin = margin(b = 1, t = 0)))+
+  labs(title = "Change in ", fill = "Change in production")
+```
+
+```{r}
+beer_states %>% 
+  filter(state != "total") %>% 
+  # filter(state == "TN") %>%
+  drop_na() %>% 
+  group_by(state, year) %>% 
+  summarise(sum=sum(barrels)) %>% 
+  # slice(1,12) %>%
+  # mutate(pct.chg = ((sum - lag(sum)) / lag(sum) * 100)) %>%
+  # mutate(pct.chg = log(last(sum) - first(sum)) / first(sum) * 100) %>% 
+  ungroup() %>% 
+  group_by(state) %>% 
+  replace_na(list(pct.chg = 0)) %>% 
+  ungroup() %>% 
+  left_join(codes, by = c("state" = "state_abbr")) %>% 
+  left_join(states, by = c("state_name" = "region")) %>% 
+  left_join(pop, by = c("state" = "abbr")) %>% 
+  filter(!state %in% c("alaska", "hawaii")) %>% 
+  group_by(state, year) %>% 
+  mutate(per.cap = sum / pop_2015) %>% 
+  # mutate(pct.chg = ((sum / pop_2015 - lag(sum / pop_2015)) / lag(sum / pop_2015) * 100)) %>%
+  ggplot()+
+  geom_polygon(aes(long, lat, group = group, fill = per.cap), color = "white", size = 0.1) +
+  # geom_polygon(aes(long, lat, group = group, fill = pct.chg), color = "white", size = 0.1) +
+  # scale_fill_paletteer_c("viridis::viridis", -1, breaks = c(50, 100, 200, 300))+
+  scale_fill_paletteer_c("viridis::viridis", -1)+
+  coord_map()+
+  theme_void()+
+  facet_wrap(~year)+
+  theme(legend.position = "bottom",
+        plot.title = element_text(face = "bold", hjust = 0.5),
+        text = element_text(family = "Helvetica"),
+        panel.spacing = unit(2, "lines"),
+        strip.text.x = element_text(margin = margin(b = 1, t = 0)))+
+  labs(title = "Per capita beer-production in Tennesse", fill = "Barrels of beer per capita")
+  
+  ggsave("beer.png", dpi = 300, width = 12, height = 8)
+```
+
+```{r}
+beer_states %>% 
+  filter(state != "total") %>% 
+  # filter(state == "TN") %>%
+  drop_na() %>% 
+  group_by(state, year) %>% 
+  summarise(sum=sum(barrels)) %>% 
+  # slice(1,12) %>%
+  # mutate(pct.chg = ((sum - lag(sum)) / lag(sum) * 100)) %>%
+  # mutate(pct.chg = log(last(sum) - first(sum)) / first(sum) * 100) %>% 
+  mutate(chg = ((sum - lag(sum))) / 1000000) %>% 
+  ungroup() %>% 
+  group_by(state) %>% 
+  replace_na(list(pct.chg = 0)) %>% 
+  ungroup() %>% 
+  left_join(codes, by = c("state" = "state_abbr")) %>% 
+  left_join(states, by = c("state_name" = "region")) %>% 
+  left_join(pop, by = c("state" = "abbr")) %>% 
+  filter(!state %in% c("alaska", "hawaii")) %>% 
+  filter(year != 2008) %>% 
+  ggplot()+
+  geom_polygon(aes(long, lat, group = group, fill = chg), color = "white", size = 0.1) +
+  # geom_polygon(aes(long, lat, group = group, fill = pct.chg), color = "white", size = 0.1) +
+  # scale_fill_paletteer_c("viridis::viridis", -1, breaks = c(50, 100, 200, 300))+
+  # scale_fill_paletteer_c("viridis::viridis", -1)+
+  scale_fill_paletteer_c("viridis::plasma")+
+  coord_map()+
+  theme_void()+
+  facet_wrap(~year)+
+  theme(legend.position = "bottom",
+        plot.title = element_text(face = "bold", hjust = 0.5),
+        text = element_text(family = "Helvetica"),
+        panel.spacing = unit(2, "lines"),
+        strip.text.x = element_text(margin = margin(b = 1, t = 0)))+
+  labs(title = "Change in b", fill = "Change in production")
+```
