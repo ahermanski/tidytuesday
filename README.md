@@ -1,5 +1,9 @@
 # #TidyTuesday
 
+## 2020 Week 20
+
+![Week 20](https://raw.githubusercontent.com/ahermanski/tidytuesday/master/plots/Tidytuesday_week_20_sthelens.mp4.png)
+
 ## 2020 Week 14
 
 ![Week 14](https://raw.githubusercontent.com/ahermanski/tidytuesday/master/plots/Tidytuesday_week_14b.png)
