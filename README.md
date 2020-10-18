@@ -2,7 +2,7 @@
 
 ## 2020 Week 20
 
-![Week 20](https://raw.githubusercontent.com/ahermanski/tidytuesday/master/plots/Tidytuesday_week_20_sthelens.mp4)
+![Week 20](https://raw.githubusercontent.com/ahermanski/tidytuesday/master/plots/Tidytuesday_week_20_sthelens.png)
 
 ## 2020 Week 14
 
